@@ -2,11 +2,15 @@
 
   $(document).ready(function(){
     var slider = tns({
-      container: '.homepage-slider',
+      mode: 'gallery',
+      container: '.jss-slider',
       items: 1,
-      slideBy: 'page',
+      controlsContainer: "#customize-controls",
+      navPosition: "bottom",
+      autoplayButton: false,
+      autoplayButtonOutput: false,
       autoplay: true
     });
   });
-  
+
 })(jQuery);
