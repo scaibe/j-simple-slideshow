@@ -8,6 +8,14 @@
  */
 
 
+ // Exit if accessed directly.
+ if ( ! defined( 'ABSPATH' ) ) {
+ 	exit;
+ }
+
+ define( 'JSS_PATH', realpath( plugin_dir_path( __FILE__ ) ) . DIRECTORY_SEPARATOR );
+ define( 'JSS_URL', plugin_dir_url( __FILE__ ) );
+
 /**
  * Creazione nuovo type post "slideshow"
  */
@@ -52,12 +60,12 @@ function jss_posttype_init() {
        'has_archive'        => true,
        'hierarchical'       => false,
        'menu_position'      => 20,
-       'supports'           => array( 'title', 'editor', 'author', 'thumbnail' ),
+       'supports'           => array( 'title', 'editor', 'author', 'thumbnail', 'page-attributes' ),
        'taxonomies'         => array( 'slide-visibility' ),
        'show_in_rest'       => true
    );
 
-   register_post_type( 'Shideshow', $args );
+   register_post_type( 'slideshow', $args );
 }
 add_action( 'init', 'jss_posttype_init' );
 
@@ -94,5 +102,100 @@ function jss_taxonomy_init() {
 }
 
 add_action( 'init', 'jss_taxonomy_init', 0 );
+
+
+/*  Enqueue javascript
+/* ------------------------------------ */
+if ( ! function_exists( 'custom_scripts' ) ) {
+
+ function custom_scripts() {
+
+   wp_enqueue_script( 'tiny-slider', '//cdnjs.cloudflare.com/ajax/libs/tiny-slider/2.9.2/min/tiny-slider.js', array( 'jquery' ),null,true );
+   wp_enqueue_script( 'jss-script',JSS_URL.'assets/js/jss-script.js', array( 'jquery' ),null,true );
+
+   $array = array( "path_wp" => home_url().'/');
+   wp_localize_script( "bx-slider-js", "php_vars", $array );
+ }
+
+ add_action( 'wp_enqueue_scripts', 'custom_scripts' );
+}
+
+/*  Enqueue css
+/* ------------------------------------ */
+if ( ! function_exists( 'custom_styles' ) ) {
+
+ function custom_styles() {
+   wp_enqueue_style( 'tiny-slider', '//cdnjs.cloudflare.com/ajax/libs/tiny-slider/2.9.3/tiny-slider.css');
+   wp_enqueue_style( 'jss-style', JSS_URL.'assets/css/jss-style.css' );
+ }
+
+ add_action( 'wp_enqueue_scripts', 'custom_styles' );
+}
+
+
+/**
+ * Shortcode per creazione slideshow
+ */
+
+function add_shortcode_slideshow ($atts = array()) {
+
+ if(!empty($atts))  $visibility = $atts['visibility'];
+
+ $args = array( 'post_type' => 'slideshow' );
+
+ if(isset($visibility)) {
+
+   $args['tax_query'] = array(
+     array(
+       'taxonomy' => 'slide-visibility',
+       'field' => 'slug',
+       'terms' => $visibility
+     )
+   );
+
+ }
+
+ $slideshow_query = new WP_Query( $args );
+
+ $view = '<div class="jss-slideshow-wrapper '.$visibility.' ">';
+ $view .= '<div class="jss-slider" '.$visibility.'>';
+
+ while ( $slideshow_query->have_posts() ) :
+   $slideshow_query->the_post();
+   $slideshow_image_attributes = wp_get_attachment_image_src(get_post_thumbnail_id($slideshow_query->ID),'full');
+
+   $view.='<div>';
+   $view.='<div><img src="'.$slideshow_image_attributes[0].'" alt=""></div>';
+   $view.='<div class="title-slider">'.get_the_title($slideshow_query->ID).'</div>';
+   $view.='<div class="title-slider"'.get_the_content($slideshow_query->ID).'</div>';
+   $view.='</div>';
+
+ endwhile;
+
+ // Ripristina Query & Post Data originali
+ wp_reset_query();
+ wp_reset_postdata();
+
+ $view.='</div>'; //chiusura slider
+
+ $view.='<ul class="controls" id="customize-controls">
+    <li class="prev">
+      <span class="dashicons dashicons-arrow-left-alt2"></span>
+    </li>
+    <li class="next">
+      <span class="dashicons dashicons-arrow-right-alt2"></span>
+    </li>
+  </ul>';
+
+  $view.='</div>'; //chiusura contenitore slider
+
+ return $view;
+
+}
+
+add_shortcode( 'jss-slideshow', 'add_shortcode_slideshow' );
+
+
+
 
 ?>
